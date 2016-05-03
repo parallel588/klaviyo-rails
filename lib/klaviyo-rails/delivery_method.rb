@@ -12,7 +12,7 @@ module KlaviyoRails
 
     def deliver!(mail)
 
-      response = client.templates.render_and_send(message_to_klaviyo(mail))
+      response = client.templates.render_and_send(klaviyo_message(mail))
 
       if settings[:return_response]
         response
