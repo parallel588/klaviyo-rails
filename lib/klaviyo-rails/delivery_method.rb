@@ -11,17 +11,8 @@ module KlaviyoRails
     end
 
     def deliver!(mail)
-      response = client.invoke(
-        :templates,
-        :render_and_send,
-        id: mail['template_id'].value,
-        context: mail['context'].value,
-        service: settings.fetch(:service) { 'klaviyo' },
-        from_email: mail['from'].to_s,
-        from_name:  mail['from'].display_names.first,
-        subject: mail['subject'].to_s,
-        to: mail['to'].to_s
-      )
+
+      response = client.templates.render_and_send(message_to_klaviyo(mail))
 
       if settings[:return_response]
         response
@@ -31,6 +22,25 @@ module KlaviyoRails
     end
 
     private
+
+    def klaviyo_message(message)
+      @klaviyo_message = {
+        id: message['template_id'].value,
+        context: message['context'].value,
+        service: settings.fetch(:service) { 'klaviyo' },
+        subject: message['subject'].to_s,
+        to: message['to'].to_s
+      }
+
+      if message['from']
+        @klaviyo_message[:from_email] = message['from'].addresses.first
+        unless message['from'].display_names.compact.empty?
+          @klaviyo_message[:from_name] = message['from'].display_names.compact.first
+        end
+      end
+
+      @klaviyo_message
+    end
 
     def client
       @client ||= ::Klaviyo::Client.new(settings[:secret_key], settings[:token])
