@@ -11,8 +11,22 @@ module KlaviyoRails
     end
 
     def deliver!(mail)
-
-      response = client.templates.render_and_send(klaviyo_message(mail))
+      if mail['as_event']
+        response = client.event.track(
+          event_name: mail['event_name'],
+          customer_properties: {
+            email: mail['to'].to_s
+          },
+          properties: mail['context'].value.merge(
+            subject: mail['subject'].to_s,
+            to: mail['to'].to_s,
+            from_name: from_name(mail),
+            from_email: from_email(mail)
+          )
+        )
+      else
+        response = client.templates.render_and_send(klaviyo_message(mail))
+      end
 
       if settings[:return_response]
         response
@@ -26,20 +40,30 @@ module KlaviyoRails
     def klaviyo_message(message)
       @klaviyo_message = {
         id: message['template_id'].value,
-        context: message['context'].value,
+        context: JSON.dump(message['context'].value),
         service: settings.fetch(:service) { 'klaviyo' },
         subject: message['subject'].to_s,
         to: message['to'].to_s
       }
 
-      if message['from']
-        @klaviyo_message[:from_email] = message['from'].addresses.first
-        unless message['from'].display_names.compact.empty?
-          @klaviyo_message[:from_name] = message['from'].display_names.compact.first
-        end
-      end
+      @klaviyo_message[:from_email] = from_email(message) if from_email(message)
+      @klaviyo_message[:from_name] = from_name(message) if from_name(message)
 
       @klaviyo_message
+    end
+
+    def from_email(message)
+      @from_email ||= message['from'] && message['from'].addresses.first
+    end
+
+    def from_name(message)
+      @from_name ||
+        begin
+          unless message['from'].display_names.compact.empty?
+            @from_name = message['from'].display_names.compact.first
+          end
+        end
+      @from_name
     end
 
     def client
