@@ -11,18 +11,25 @@ module KlaviyoRails
     end
 
     def deliver!(mail)
-      if mail['as_event']
+      if mail['as_event'] && mail['as_event'].value.to_s == 'true'
         response = client.event.track(
-          event_name: mail['event_name'],
+          event_name: mail['event_name'].value,
           customer_properties: {
-            email: mail['to'].to_s
+            '$email': mail['to'].to_s
           },
-          properties: mail['context'].value.merge(
+          properties: {
+            email: mail['to'].to_s,
+            '$event_id': mail.object_id,
+            date: Time.current,
+            #context: { e: 1 },
+            context: mail['context'].value,
             subject: mail['subject'].to_s,
             to: mail['to'].to_s,
-            from_name: from_name(mail),
-            from_email: from_email(mail)
-          )
+            from:{
+                    name: from_name(mail),
+                    email: from_email(mail)
+                  }
+          }
         )
       else
         response = client.templates.render_and_send(klaviyo_message(mail))
