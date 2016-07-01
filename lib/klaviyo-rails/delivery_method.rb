@@ -21,8 +21,7 @@ module KlaviyoRails
             email: mail['to'].to_s,
             '$event_id': mail.object_id,
             date: Time.current,
-            #context: { e: 1 },
-            context: mail['context'].value,
+            context: JSON.load(mail['context'].value),
             subject: mail['subject'].to_s,
             to: mail['to'].to_s,
             from:{
@@ -47,7 +46,7 @@ module KlaviyoRails
     def klaviyo_message(message)
       @klaviyo_message = {
         id: message['template_id'].value,
-        context: JSON.dump(message['context'].value),
+        context: message['context'].value,
         service: settings.fetch(:service) { 'klaviyo' },
         subject: message['subject'].to_s,
         to: message['to'].to_s
